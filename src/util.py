@@ -4,7 +4,7 @@ Helper functions mostly for feature extraction.
 Used many modified and intact code blocks from 
 'https://github.com/jeffrey-palmerino/BugLocalizationDNN'
 """
-
+import torch
 import csv
 import re
 import os
@@ -47,10 +47,12 @@ def tsv2dict(tsv_path):
     reader = csv.DictReader(open(tsv_path, "r"), delimiter="\t")
     dict_list = []
     for line in reader:
+        #print(line[str("files")])
         line["files"] = [
-            os.path.normpath(f[8:])
+            #os.path.normpath(f[8:])
+            os.path.normpath(f)
             for f in line["files"].strip().split()
-            if f.startswith("bundles/") and f.endswith(".java")
+            if f.endswith(".java")
         ]
         line["raw_text"] = line["summary"] + line["description"]
         # line["summary"] = clean_and_split(line["summary"][11:])
@@ -150,7 +152,7 @@ def normalize(text):
 
     return stemmed_tokens
 
-
+from sklearn.feature_extraction.text import TfidfVectorizer
 def cosine_sim(text1, text2):
     """ Cosine similarity with tfidf
 
@@ -158,19 +160,25 @@ def cosine_sim(text1, text2):
         text1 {string} -- first text
         text2 {string} -- second text
     """
-    vectorizer = TfidfVectorizer(tokenizer=normalize, min_df=1, stop_words="english")
+    """vectorizer = TfidfVectorizer(tokenizer=normalize, min_df=1, stop_words="english")
     tfidf = vectorizer.fit_transform([text1, text2])
-    sim = ((tfidf * tfidf.T).A)[0, 1]
+    sim = ((tfidf * tfidf.T).A)[0, 1]"""
+
+    document = [text1, text2]
+    tfidf_model = TfidfVectorizer().fit(document)
+    sparse_result = tfidf_model.transform(document)  # 得到tf-idf矩阵，稀疏矩阵表示法
+    sim = ((sparse_result * sparse_result.T).A)[0, 1]
+
 
     return sim
 
 
-def get_all_source_code(start_dir):
-    """ Creates corpus starting from 'start_dir'
+"""def get_all_source_code(start_dir):
+    #Creates corpus starting from 'start_dir'
 
-    Arguments:
-        start_dir {string} -- directory path to start
-    """
+    #Arguments:
+    #    start_dir {string} -- directory path to start
+    #
     files = {}
     start_dir = os.path.normpath(start_dir)
     for dir_, dir_names, file_names in os.walk(start_dir):
@@ -183,6 +191,35 @@ def get_all_source_code(start_dir):
             file_key = file_key[len(os.sep) :]
             files[file_key] = src
 
+    return files"""
+import openpyxl
+import pickle
+import time
+def get_all_source_code(start_dir):
+    """ Creates corpus starting from 'start_dir'
+
+    Arguments:
+        start_dir {string} -- directory path to start
+    """
+    data = openpyxl.load_workbook(start_dir)
+    sheetnames = data.get_sheet_names()
+    table = data.get_sheet_by_name(sheetnames[0])
+    nrows = table.max_row  # 获得行数
+
+    begin = 2
+    end = nrows
+    files = {}
+    while(begin<=end):
+        br_files = str(table.cell(begin, 11).value).split(" ")
+        try:
+            for i in br_files:
+                tmp = i.split(":")
+                java_file_key = tmp[1]
+                java_file = os.path.normpath(tmp[0])
+                files[java_file_key] = java_file
+        except:
+            print(" ")
+        begin = begin + 1
     return files
 
 
@@ -294,7 +331,6 @@ def helper_collections(samples, only_rvsm=False):
 
     for s in samples:
         temp_dict = {}
-
         values = [float(s["rVSM_similarity"])]
         if not only_rvsm:
             values += [
@@ -307,7 +343,7 @@ def helper_collections(samples, only_rvsm=False):
 
         sample_dict[s["report_id"]].append(temp_dict)
 
-    bug_reports = tsv2dict("../data/Eclipse_Platform_UI.txt")
+    bug_reports = tsv2dict("../data/Tomcat.txt")
     br2files_dict = {}
 
     for bug_report in bug_reports:
@@ -348,7 +384,10 @@ def topk_accuarcy(test_bug_reports, sample_dict, br2files_dict, clf=None):
         # Remember that, in features.csv, there are 50 wrong(randomly chosen) files for each right(buggy)
         relevancy_list = []
         if clf:  # dnn classifier
-            relevancy_list = clf.predict(dnn_input)
+            #relevancy_list = clf.predict(dnn_input)
+            dnn_input = torch.tensor(dnn_input)
+            relevancy_list = clf(dnn_input).squeeze(1).detach().numpy() # 转换
+            #print(relevancy_list.shape)
         else:  # rvsm
             relevancy_list = np.array(dnn_input).ravel()
 
@@ -364,7 +403,7 @@ def topk_accuarcy(test_bug_reports, sample_dict, br2files_dict, clf=None):
     for i, counter in enumerate(topk_counters):
         acc = counter / (len(test_bug_reports) - negative_total)
         acc_dict[i + 1] = round(acc, 3)
-
+    print(acc_dict)
     return acc_dict
 
 

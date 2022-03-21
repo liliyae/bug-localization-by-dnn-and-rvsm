@@ -5,7 +5,7 @@ import numpy as np
 
 
 def rsvm_model():
-    samples = csv2dict("../data/features.csv")
+    samples = csv2dict("../data/Tomcat_features.csv")
     rvsm_list = [float(sample["rVSM_similarity"]) for sample in samples]
 
     # These collections are speed up the process while calculating top-k accuracy
