@@ -22,5 +22,8 @@ Original Study                  |  Our Implementation
 :------------------------------:|:------------------------------:
 ![](./fig/origResults.png)  |  ![](./fig/ourResults.png)
 
+Other datasets              |  Other regression function
+:------------------------------:|:------------------------------:
+![](./fig/origResults.png)  |  ![](./fig/ourResults.png)
 
 More details regarding to the implementation and results can be found in the [technical report](./doc/final_report.pdf).
