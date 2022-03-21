@@ -28,7 +28,7 @@ Original Study                  |  Our Implementation
 :------------------------------:|:------------------------------:
 ![](./fig/origResults.png)  |  ![](./fig/ourResults.png)
 
-Other datasets              |  Other regression function
+Other datasets              |  Other regression functions
 :------------------------------:|:------------------------------:
 ![](./fig/dataset.png)  |  ![](./fig/rf.png)
 
